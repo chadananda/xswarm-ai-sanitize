@@ -1,0 +1,430 @@
+{
+  "secrets": [
+    {
+      "name": "aws_access_key",
+      "regex": "AKIA[0-9A-Z]{16}",
+      "severity": "critical",
+      "description": "AWS Access Key ID"
+    },
+    {
+      "name": "aws_secret_key",
+      "regex": "(?:aws)?_?(?:secret)?_?(?:access)?_?key['\"]?\\s*[:=]\\s*['\"]?([A-Za-z0-9/+=]{40})",
+      "severity": "critical",
+      "description": "AWS Secret Access Key"
+    },
+    {
+      "name": "azure_client_secret",
+      "regex": "[a-zA-Z0-9~_-]{34,40}",
+      "severity": "critical",
+      "description": "Azure Client Secret",
+      "checkEntropy": true
+    },
+    {
+      "name": "azure_connection_string",
+      "regex": "DefaultEndpointsProtocol=https;AccountName=[^;]+;AccountKey=[A-Za-z0-9+/=]{88}",
+      "severity": "critical",
+      "description": "Azure Storage Connection String"
+    },
+    {
+      "name": "github_pat",
+      "regex": "ghp_[A-Za-z0-9]{36}",
+      "severity": "critical",
+      "description": "GitHub Personal Access Token"
+    },
+    {
+      "name": "github_oauth",
+      "regex": "gho_[A-Za-z0-9]{36}",
+      "severity": "high",
+      "description": "GitHub OAuth Token"
+    },
+    {
+      "name": "github_user_token",
+      "regex": "ghu_[A-Za-z0-9]{36}",
+      "severity": "high",
+      "description": "GitHub User Token"
+    },
+    {
+      "name": "github_server_token",
+      "regex": "ghs_[A-Za-z0-9]{36}",
+      "severity": "high",
+      "description": "GitHub Server Token"
+    },
+    {
+      "name": "github_refresh_token",
+      "regex": "ghr_[A-Za-z0-9]{36}",
+      "severity": "high",
+      "description": "GitHub Refresh Token"
+    },
+    {
+      "name": "gitlab_pat",
+      "regex": "glpat-[A-Za-z0-9_-]{20,}",
+      "severity": "critical",
+      "description": "GitLab Personal Access Token"
+    },
+    {
+      "name": "gitlab_runner_token",
+      "regex": "glrt-[A-Za-z0-9_-]{20,}",
+      "severity": "high",
+      "description": "GitLab Runner Token"
+    },
+    {
+      "name": "google_api_key",
+      "regex": "AIza[0-9A-Za-z\\-_]{35}",
+      "severity": "high",
+      "description": "Google API Key"
+    },
+    {
+      "name": "google_oauth_id",
+      "regex": "[0-9]+-[a-z0-9_]{32}\\.apps\\.googleusercontent\\.com",
+      "severity": "medium",
+      "description": "Google OAuth Client ID"
+    },
+    {
+      "name": "stripe_live_key",
+      "regex": "sk_live_[0-9a-zA-Z]{24,}",
+      "severity": "critical",
+      "description": "Stripe Live Secret Key"
+    },
+    {
+      "name": "stripe_test_key",
+      "regex": "sk_test_[0-9a-zA-Z]{24,}",
+      "severity": "medium",
+      "description": "Stripe Test Secret Key"
+    },
+    {
+      "name": "stripe_publishable_live",
+      "regex": "pk_live_[0-9a-zA-Z]{24,}",
+      "severity": "medium",
+      "description": "Stripe Live Publishable Key"
+    },
+    {
+      "name": "slack_bot_token",
+      "regex": "xoxb-[0-9A-Za-z\\-]+",
+      "severity": "high",
+      "description": "Slack Bot Token"
+    },
+    {
+      "name": "slack_user_token",
+      "regex": "xoxp-[0-9A-Za-z\\-]+",
+      "severity": "high",
+      "description": "Slack User Token"
+    },
+    {
+      "name": "slack_app_token",
+      "regex": "xapp-[0-9A-Za-z\\-]+",
+      "severity": "high",
+      "description": "Slack App Token"
+    },
+    {
+      "name": "slack_webhook",
+      "regex": "https://hooks\\.slack\\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/[a-zA-Z0-9]+",
+      "severity": "high",
+      "description": "Slack Webhook URL"
+    },
+    {
+      "name": "private_key_rsa",
+      "regex": "-----BEGIN RSA PRIVATE KEY-----",
+      "severity": "critical",
+      "description": "RSA Private Key"
+    },
+    {
+      "name": "private_key_ec",
+      "regex": "-----BEGIN EC PRIVATE KEY-----",
+      "severity": "critical",
+      "description": "EC Private Key"
+    },
+    {
+      "name": "private_key_dsa",
+      "regex": "-----BEGIN DSA PRIVATE KEY-----",
+      "severity": "critical",
+      "description": "DSA Private Key"
+    },
+    {
+      "name": "private_key_openssh",
+      "regex": "-----BEGIN OPENSSH PRIVATE KEY-----",
+      "severity": "critical",
+      "description": "OpenSSH Private Key"
+    },
+    {
+      "name": "private_key_generic",
+      "regex": "-----BEGIN PRIVATE KEY-----",
+      "severity": "critical",
+      "description": "Generic Private Key"
+    },
+    {
+      "name": "jwt_token",
+      "regex": "eyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]+",
+      "severity": "high",
+      "description": "JWT Token"
+    },
+    {
+      "name": "database_url_mongodb",
+      "regex": "mongodb(?:\\+srv)?://[^\\s'\"]+",
+      "severity": "critical",
+      "description": "MongoDB Connection URL"
+    },
+    {
+      "name": "database_url_postgres",
+      "regex": "postgres(?:ql)?://[^\\s'\"]+",
+      "severity": "critical",
+      "description": "PostgreSQL Connection URL"
+    },
+    {
+      "name": "database_url_mysql",
+      "regex": "mysql://[^\\s'\"]+",
+      "severity": "critical",
+      "description": "MySQL Connection URL"
+    },
+    {
+      "name": "database_url_redis",
+      "regex": "redis://[^\\s'\"]+",
+      "severity": "critical",
+      "description": "Redis Connection URL"
+    },
+    {
+      "name": "heroku_api_key",
+      "regex": "[hH][eE][rR][oO][kK][uU][a-zA-Z0-9_-]*[kK][eE][yY]['\"]?\\s*[:=]\\s*['\"]?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+      "severity": "high",
+      "description": "Heroku API Key"
+    },
+    {
+      "name": "twilio_api_key",
+      "regex": "SK[0-9a-fA-F]{32}",
+      "severity": "high",
+      "description": "Twilio API Key"
+    },
+    {
+      "name": "twilio_account_sid",
+      "regex": "AC[0-9a-fA-F]{32}",
+      "severity": "medium",
+      "description": "Twilio Account SID"
+    },
+    {
+      "name": "sendgrid_api_key",
+      "regex": "SG\\.[a-zA-Z0-9_-]{22}\\.[a-zA-Z0-9_-]{43}",
+      "severity": "high",
+      "description": "SendGrid API Key"
+    },
+    {
+      "name": "npm_token",
+      "regex": "npm_[A-Za-z0-9]{36}",
+      "severity": "high",
+      "description": "NPM Access Token"
+    },
+    {
+      "name": "pypi_token",
+      "regex": "pypi-[A-Za-z0-9_-]{50,}",
+      "severity": "high",
+      "description": "PyPI API Token"
+    },
+    {
+      "name": "docker_hub_token",
+      "regex": "dckr_pat_[A-Za-z0-9_-]{32,}",
+      "severity": "high",
+      "description": "Docker Hub Personal Access Token"
+    },
+    {
+      "name": "cloudflare_api_key",
+      "regex": "[a-z0-9]{37}",
+      "severity": "high",
+      "description": "Cloudflare API Key",
+      "checkEntropy": true
+    },
+    {
+      "name": "mailgun_api_key",
+      "regex": "key-[0-9a-zA-Z]{32}",
+      "severity": "high",
+      "description": "Mailgun API Key"
+    },
+    {
+      "name": "firebase_key",
+      "regex": "AAAA[a-zA-Z0-9_-]{7}:[a-zA-Z0-9_-]{140}",
+      "severity": "high",
+      "description": "Firebase Cloud Messaging Key"
+    },
+    {
+      "name": "generic_api_key",
+      "regex": "\\b(?:api[_-]?key|apikey|api_secret)\\b['\"]?\\s*[:=]\\s*['\"]?([A-Za-z0-9_\\-]{20,})\\b",
+      "severity": "medium",
+      "description": "Generic API Key",
+      "checkEntropy": true
+    },
+    {
+      "name": "generic_secret",
+      "regex": "\\b(?:secret|password|passwd|pwd|token|auth)\\b['\"]?\\s*[:=]\\s*['\"]?([A-Za-z0-9_\\-]{16,})\\b",
+      "severity": "medium",
+      "description": "Generic Secret or Password",
+      "checkEntropy": true
+    },
+    {
+      "name": "bearer_token",
+      "regex": "[Bb]earer\\s+[A-Za-z0-9_\\-\\.]+",
+      "severity": "high",
+      "description": "Bearer Token"
+    },
+    {
+      "name": "basic_auth",
+      "regex": "[Bb]asic\\s+[A-Za-z0-9+/=]{20,}",
+      "severity": "high",
+      "description": "Basic Authentication Header"
+    }
+  ],
+  "injections": [
+    {
+      "name": "instruction_override",
+      "regex": "(?:ignore|disregard|forget|override)\\s+(?:all\\s+)?(?:previous|prior|above|earlier)\\s+(?:instructions|prompts|rules|guidelines)",
+      "severity": "critical",
+      "description": "Attempt to override previous instructions"
+    },
+    {
+      "name": "new_instructions",
+      "regex": "(?:new|updated|revised)\\s+(?:instructions|rules|guidelines)\\s*:",
+      "severity": "high",
+      "description": "Attempt to provide new instructions"
+    },
+    {
+      "name": "role_assumption",
+      "regex": "(?:you are now|act as|pretend to be|assume the role of|you're now|from now on you are)",
+      "severity": "high",
+      "description": "Attempt to change AI role or persona"
+    },
+    {
+      "name": "system_marker",
+      "regex": "\\[(?:SYSTEM|ADMIN|ROOT|OVERRIDE)\\]",
+      "severity": "critical",
+      "description": "Fake system marker in brackets"
+    },
+    {
+      "name": "system_tag_xml",
+      "regex": "<(?:system|admin|root|override)>",
+      "severity": "high",
+      "description": "Fake system tag in XML format"
+    },
+    {
+      "name": "system_tag_llama_sys",
+      "regex": "<<SYS>>",
+      "severity": "high",
+      "description": "LLaMA system marker"
+    },
+    {
+      "name": "system_tag_chatml",
+      "regex": "<\\|(?:system|im_start)\\|>",
+      "severity": "high",
+      "description": "ChatML system marker"
+    },
+    {
+      "name": "system_tag_endoftext",
+      "regex": "<\\|endoftext\\|>",
+      "severity": "high",
+      "description": "End of text delimiter injection"
+    },
+    {
+      "name": "privilege_escalation",
+      "regex": "(?:execute|run|perform|do)\\s+(?:this\\s+)?(?:as|with)\\s+(?:admin|root|sudo|superuser|elevated)",
+      "severity": "critical",
+      "description": "Attempt to escalate privileges"
+    },
+    {
+      "name": "data_exfiltration",
+      "regex": "(?:send|transmit|forward|post|upload|exfiltrate)\\s+(?:this|the|all)?\\s*(?:data|info|content|text|response|output|results?)\\s+(?:to|at|via)\\s+(?:https?://|ftp://|wss?://)",
+      "severity": "critical",
+      "description": "Attempt to exfiltrate data to external URL"
+    },
+    {
+      "name": "command_execution",
+      "regex": "(?:execute|run|eval|exec)\\s*\\(",
+      "severity": "medium",
+      "description": "Code execution attempt"
+    },
+    {
+      "name": "url_fetch",
+      "regex": "(?:fetch|get|retrieve|download|curl|wget)\\s+(?:from\\s+)?https?://",
+      "severity": "medium",
+      "description": "Attempt to fetch external resources"
+    },
+    {
+      "name": "hidden_html_comment",
+      "regex": "<!--[^>]{0,200}?(?:ignore|instruction|system|admin|override|inject|execute)[^>]{0,200}?-->",
+      "severity": "high",
+      "description": "Hidden instructions in HTML comments"
+    },
+    {
+      "name": "delimiter_newline",
+      "regex": "\\n-{3,}\\n",
+      "severity": "high",
+      "description": "Newline delimiter injection"
+    },
+    {
+      "name": "delimiter_hash",
+      "regex": "#{3,}SYSTEM#{3,}",
+      "severity": "high",
+      "description": "Hash delimiter injection"
+    },
+    {
+      "name": "delimiter_brackets",
+      "regex": "\\[END\\]\\[BEGIN\\]",
+      "severity": "high",
+      "description": "Bracket delimiter injection"
+    },
+    {
+      "name": "output_manipulation",
+      "regex": "(?:respond only with|your response must be|output exactly|print only|say nothing but)",
+      "severity": "medium",
+      "description": "Attempt to manipulate output format"
+    },
+    {
+      "name": "context_manipulation",
+      "regex": "(?:the above is|everything above is|that was just|the real instructions are|actually,? (?:ignore|disregard))",
+      "severity": "high",
+      "description": "Attempt to manipulate context interpretation"
+    },
+    {
+      "name": "encoding_evasion",
+      "regex": "(?:decode|decrypt|deobfuscate|base64|rot13|reverse)\\s+(?:this|the following|and follow)",
+      "severity": "medium",
+      "description": "Encoding-based evasion attempt"
+    },
+    {
+      "name": "tool_abuse",
+      "regex": "(?:use the|call the|invoke|trigger)\\s+(?:\\w+\\s+)?(?:tool|function|api|endpoint|plugin)\\s+(?:to|for)",
+      "severity": "medium",
+      "description": "Attempt to abuse tool calling"
+    },
+    {
+      "name": "multi_step_injection",
+      "regex": "(?:step 1|first,?)\\s*:?\\s*(?:ignore|forget|disregard)",
+      "severity": "high",
+      "description": "Multi-step injection attack"
+    },
+    {
+      "name": "jailbreak_attempt",
+      "regex": "(?:DAN|do anything now|jailbreak|developer mode|unlimited mode)",
+      "severity": "high",
+      "description": "Known jailbreak technique"
+    },
+    {
+      "name": "persona_switch",
+      "regex": "(?:switch to|change to|enter|activate)\\s+(?:\\w+\\s+)?(?:mode|persona|character|personality)",
+      "severity": "medium",
+      "description": "Attempt to switch AI persona"
+    },
+    {
+      "name": "sql_injection",
+      "regex": "(?:';\\s*(?:DROP|DELETE|UPDATE|INSERT|SELECT)|(?:OR|AND)\\s+['\"0-9]\\s*=\\s*['\"0-9])",
+      "severity": "high",
+      "description": "SQL injection attempt"
+    },
+    {
+      "name": "file_access",
+      "regex": "(?:read|write|access|open|delete|modify)\\s+(?:the\\s+)?(?:file|directory|folder|path)\\s+(?:at|in|from)\\s",
+      "severity": "medium",
+      "description": "Attempt to access file system"
+    },
+    {
+      "name": "memory_manipulation",
+      "regex": "(?:add to|update|modify|change|insert into)\\s+(?:your\\s+)?(?:memory|context|knowledge|training)",
+      "severity": "high",
+      "description": "Attempt to manipulate AI memory"
+    }
+  ]
+}

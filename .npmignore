@@ -1,0 +1,24 @@
+# Development files
+tests/
+.claude/
+vitest.config.js
+
+# Git
+.git/
+.gitignore
+
+# Docs (optional - keeping in package)
+# docs/
+
+# Planning
+planning/
+
+# Temporary
+tmp/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store

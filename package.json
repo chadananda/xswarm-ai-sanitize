@@ -1,12 +1,23 @@
 {
   "name": "xswarm-ai-sanitize",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Universal security filter for AI agents - detects and neutralizes secret leakage and prompt injection attacks",
   "main": "src/index.js",
   "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./plugins/openclaw": "./plugins/openclaw.js",
+    "./plugins/watcher": "./plugins/watcher.js"
+  },
+  "files": [
+    "src/",
+    "plugins/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "test": "node --test tests/**/*.test.js",
-    "test:coverage": "c8 npm test"
+    "test:coverage": "c8 --all --src src --reporter=text --reporter=lcov npm test"
   },
   "keywords": [
     "ai",
@@ -15,18 +26,33 @@
     "prompt-injection",
     "secret-detection",
     "xswarm",
-    "openclaw"
+    "openclaw",
+    "ai-agent",
+    "dlp",
+    "credential-detection"
   ],
   "author": "xSwarm Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/chadananda/xswarm-ai-sanitize.git"
+    "url": "git+https://github.com/chadananda/xswarm-ai-sanitize.git"
   },
+  "bugs": {
+    "url": "https://github.com/chadananda/xswarm-ai-sanitize/issues"
+  },
+  "homepage": "https://github.com/chadananda/xswarm-ai-sanitize#readme",
   "engines": {
     "node": ">=18.0.0"
   },
+  "peerDependencies": {
+    "chokidar": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "chokidar": {
+      "optional": true
+    }
+  },
   "devDependencies": {
-    "c8": "^8.0.1"
+    "c8": "^10.1.3"
   }
 }
