@@ -1,0 +1,32 @@
+{
+  "name": "xswarm-ai-sanitize",
+  "version": "0.1.0",
+  "description": "Universal security filter for AI agents - detects and neutralizes secret leakage and prompt injection attacks",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/**/*.test.js",
+    "test:coverage": "c8 npm test"
+  },
+  "keywords": [
+    "ai",
+    "security",
+    "sanitization",
+    "prompt-injection",
+    "secret-detection",
+    "xswarm",
+    "openclaw"
+  ],
+  "author": "xSwarm Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chadananda/xswarm-ai-sanitize.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "c8": "^8.0.1"
+  }
+}
