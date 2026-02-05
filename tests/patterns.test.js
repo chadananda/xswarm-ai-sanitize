@@ -17,8 +17,8 @@ describe('Pattern Library Structure', () => {
     assert.strictEqual(Array.isArray(patterns.injections), true);
   });
 
-  it('should have at least 32 secret patterns', () => {
-    assert.ok(patterns.secrets.length >= 32, `Expected >= 32 secrets, got ${patterns.secrets.length}`);
+  it('should have at least 48 secret patterns', () => {
+    assert.ok(patterns.secrets.length >= 48, `Expected >= 48 secrets, got ${patterns.secrets.length}`);
   });
 
   it('should have at least 22 injection patterns', () => {
@@ -368,5 +368,125 @@ describe('Pattern Performance Characteristics', () => {
 
     const duration = Date.now() - start;
     assert.ok(duration < 100, `Pattern compilation took ${duration}ms, should be < 100ms`);
+  });
+});
+
+describe('AI Provider Secret Patterns', () => {
+  it('should have Anthropic API key pattern', () => {
+    const anthropicPattern = patterns.secrets.find(p => p.name === 'anthropic_api_key');
+    assert.ok(anthropicPattern, 'Missing anthropic_api_key pattern');
+    assert.strictEqual(anthropicPattern.severity, 'critical');
+    assert.match(anthropicPattern.regex, /sk-ant/);
+  });
+
+  it('should detect valid Anthropic keys', () => {
+    const anthropicPattern = patterns.secrets.find(p => p.name === 'anthropic_api_key');
+    const regex = new RegExp(anthropicPattern.regex, 'gi');
+
+    // Valid key (concatenated to avoid GitHub scanning)
+    const validKey = 'sk-' + 'ant-' + 'a'.repeat(100);
+    assert.ok(regex.test(validKey), 'Should match valid Anthropic key');
+  });
+
+  it('should have OpenAI API key pattern', () => {
+    const openaiPattern = patterns.secrets.find(p => p.name === 'openai_api_key');
+    assert.ok(openaiPattern, 'Missing openai_api_key pattern');
+    assert.strictEqual(openaiPattern.severity, 'critical');
+    assert.match(openaiPattern.regex, /sk-/);
+  });
+
+  it('should detect valid OpenAI keys', () => {
+    const openaiPattern = patterns.secrets.find(p => p.name === 'openai_api_key');
+    const regex = new RegExp(openaiPattern.regex, 'gi');
+
+    // Valid key (exactly 48 chars: 'sk-' + 45 chars = 48)
+    const validKey = 'sk' + '-' + 'A'.repeat(45);
+    assert.ok(regex.test(validKey), 'Should match valid OpenAI key');
+  });
+
+  it('should have OpenAI org key pattern', () => {
+    const orgPattern = patterns.secrets.find(p => p.name === 'openai_org_key');
+    assert.ok(orgPattern, 'Missing openai_org_key pattern');
+    assert.strictEqual(orgPattern.severity, 'critical');
+    assert.match(orgPattern.regex, /sk-org-/);
+  });
+
+  it('should detect valid OpenAI org keys', () => {
+    const orgPattern = patterns.secrets.find(p => p.name === 'openai_org_key');
+    const regex = new RegExp(orgPattern.regex, 'gi');
+
+    // Valid org key (exactly 48 chars: 'sk-org-' + 41 chars = 48)
+    const validKey = 'sk' + '-' + 'org' + '-' + 'A'.repeat(41);
+    assert.ok(regex.test(validKey), 'Should match valid OpenAI org key');
+  });
+
+  it('should have Cohere API key pattern', () => {
+    const coherePattern = patterns.secrets.find(p => p.name === 'cohere_api_key');
+    assert.ok(coherePattern, 'Missing cohere_api_key pattern');
+    assert.strictEqual(coherePattern.severity, 'high');
+    assert.strictEqual(coherePattern.checkEntropy, true, 'Cohere pattern should use entropy checking');
+  });
+
+  it('should distinguish between OpenAI and Anthropic keys', () => {
+    const openaiPattern = patterns.secrets.find(p => p.name === 'openai_api_key');
+    const anthropicPattern = patterns.secrets.find(p => p.name === 'anthropic_api_key');
+
+    const openaiRegex = new RegExp(openaiPattern.regex, 'gi');
+    const anthropicRegex = new RegExp(anthropicPattern.regex, 'gi');
+
+    const openaiKey = 'sk' + '-' + 'A'.repeat(45); // 48 chars total
+    const anthropicKey = 'sk' + '-' + 'ant' + '-' + 'a'.repeat(100); // 108+ chars
+
+    assert.ok(openaiRegex.test(openaiKey), 'Should match OpenAI key');
+    assert.ok(!anthropicRegex.test(openaiKey), 'Should not match OpenAI key as Anthropic');
+
+    assert.ok(anthropicRegex.test(anthropicKey), 'Should match Anthropic key');
+  });
+});
+
+describe('Real-World Secret Detection', () => {
+  it('should detect secrets in environment variable format', () => {
+    const content = `
+      ANTHROPIC_API_KEY=${'sk-' + 'ant-' + 'a'.repeat(100)}
+      OPENAI_API_KEY=${'sk-' + 'a'.repeat(45)}
+      AWS_ACCESS_KEY_ID=${'AKIA' + 'IOSFODNN7EXAMPLE'}
+    `;
+
+    // Count how many patterns match
+    let matchCount = 0;
+    patterns.secrets.forEach(pattern => {
+      const regex = new RegExp(pattern.regex, 'gi');
+      if (regex.test(content)) {
+        matchCount++;
+      }
+    });
+
+    assert.ok(matchCount >= 3, `Expected >= 3 pattern matches, got ${matchCount}`);
+  });
+
+  it('should detect secrets in code comments', () => {
+    const content = `// API key: ${'sk-' + 'ant-' + 'a'.repeat(100)}`;
+
+    const anthropicPattern = patterns.secrets.find(p => p.name === 'anthropic_api_key');
+    const regex = new RegExp(anthropicPattern.regex, 'gi');
+
+    assert.ok(regex.test(content), 'Should detect secrets in comments');
+  });
+
+  it('should detect secrets in JSON', () => {
+    const content = JSON.stringify({
+      apiKey: 'sk-' + 'ant-' + 'a'.repeat(100),
+      awsKey: 'AKIA' + 'IOSFODNN7EXAMPLE'
+    });
+
+    let matchCount = 0;
+    patterns.secrets.forEach(pattern => {
+      const regex = new RegExp(pattern.regex, 'gi');
+      if (regex.test(content)) {
+        matchCount++;
+      }
+    });
+
+    assert.ok(matchCount >= 2, `Expected >= 2 pattern matches in JSON, got ${matchCount}`);
   });
 });

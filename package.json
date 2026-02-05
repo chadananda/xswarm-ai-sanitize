@@ -4,6 +4,9 @@
   "description": "Universal security filter for AI agents - detects and neutralizes secret leakage and prompt injection attacks",
   "main": "src/index.js",
   "type": "module",
+  "bin": {
+    "xswarm-ai-sanitize": "./bin/cli.js"
+  },
   "exports": {
     ".": "./src/index.js",
     "./plugins/openclaw": "./plugins/openclaw.js",
@@ -12,12 +15,19 @@
   "files": [
     "src/",
     "plugins/",
+    "bin/",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
     "test": "node --test tests/**/*.test.js",
-    "test:coverage": "c8 --all --src src --reporter=text --reporter=lcov npm test"
+    "test:coverage": "c8 --all --src src --reporter=text --reporter=lcov npm test",
+    "test:functional": "./test-real-functionality.sh",
+    "deploy": "./scripts/deploy.sh minor",
+    "deploy:major": "./scripts/deploy.sh major",
+    "deploy:minor": "./scripts/deploy.sh minor",
+    "deploy:patch": "./scripts/deploy.sh patch",
+    "prepublishOnly": "npm test"
   },
   "keywords": [
     "ai",

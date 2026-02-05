@@ -36,7 +36,7 @@ Agent: *executes malicious command*
   - **SANITIZE Mode**: Always-clean mode that redacts threats and allows content through
 
 - **🔍 Dual Detection Strategy**
-  - **Pattern-based**: 44 secret patterns + 27 injection patterns (fast, <5ms)
+  - **Pattern-based**: 48 secret patterns + 27 injection patterns (fast, <5ms)
   - **AI-enhanced**: Optional semantic analysis for novel attacks (Groq, Ollama, OpenAI, Anthropic, LM Studio)
 
 - **🔐 Privacy-First Design**
@@ -55,6 +55,17 @@ Agent: *executes malicious command*
 npm install xswarm-ai-sanitize
 ```
 
+### CLI Usage (No Installation Required)
+
+```bash
+# Use with npx
+npx xswarm-ai-sanitize myfile.txt
+
+# Or install globally
+npm install -g xswarm-ai-sanitize
+xswarm-ai-sanitize myfile.txt
+```
+
 Optional: Install `chokidar` for file watcher plugin:
 ```bash
 npm install chokidar
@@ -62,7 +73,31 @@ npm install chokidar
 
 ## Quick Start
 
-### Basic Usage (Pattern-Only)
+### CLI (Command Line)
+
+**Sanitize a file** (redact secrets, remove injections):
+```bash
+npx xswarm-ai-sanitize config.yml
+```
+
+**Block mode** (reject if malicious):
+```bash
+npx xswarm-ai-sanitize --block production.log
+# Exits with code 1 if secrets/injections detected
+```
+
+**From stdin**:
+```bash
+cat .env | npx xswarm-ai-sanitize > safe.env
+```
+
+**See full CLI docs**: [docs/CLI.md](./docs/CLI.md)
+
+---
+
+### Node.js API
+
+#### Basic Usage (Pattern-Only)
 
 ```javascript
 import sanitize from 'xswarm-ai-sanitize';

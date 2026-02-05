@@ -1,6 +1,31 @@
 {
   "secrets": [
     {
+      "name": "anthropic_api_key",
+      "regex": "sk-ant-[a-zA-Z0-9_-]{95,110}",
+      "severity": "critical",
+      "description": "Anthropic API Key"
+    },
+    {
+      "name": "openai_api_key",
+      "regex": "sk-(?!ant-|org-)[a-zA-Z0-9]{40,}",
+      "severity": "critical",
+      "description": "OpenAI API Key"
+    },
+    {
+      "name": "openai_org_key",
+      "regex": "sk-org-[a-zA-Z0-9]{20,}",
+      "severity": "critical",
+      "description": "OpenAI Organization Key"
+    },
+    {
+      "name": "cohere_api_key",
+      "regex": "[a-zA-Z0-9]{40}",
+      "severity": "high",
+      "description": "Cohere API Key",
+      "checkEntropy": true
+    },
+    {
       "name": "aws_access_key",
       "regex": "AKIA[0-9A-Z]{16}",
       "severity": "critical",
