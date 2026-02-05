@@ -3,7 +3,7 @@
  * Auto-protects all external tool results by filtering through xswarm-ai-sanitize
  */
 
-import sanitize from '../src/index.js';
+import sanitize from '../../src/index.js';
 
 /**
  * Create OpenClaw plugin with specified configuration

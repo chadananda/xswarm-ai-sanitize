@@ -1,0 +1,14 @@
+{
+  "id": "xswarm-ai-sanitize",
+  "name": "Secret Sanitizer",
+  "description": "Sanitizes secrets from tool results before they reach agent memory",
+  "version": "1.0.0",
+  "main": "index.js",
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "mode": { "enum": ["sanitize", "block"], "default": "sanitize" },
+      "blockThreshold": { "type": "number", "default": 3 }
+    }
+  }
+}

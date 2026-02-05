@@ -5,7 +5,7 @@
  * Setup wizard for integrating secret sanitization into AI agent frameworks
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, cpSync, readdirSync } from 'fs';
 import { createInterface } from 'readline';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -22,9 +22,9 @@ const FRAMEWORKS = {
     detectPackage: 'openclaw',
     cliCommand: 'openclaw',
     plugin: 'xswarm-ai-sanitize/plugins/openclaw',
-    usage: `import createSanitizePlugin from 'xswarm-ai-sanitize/plugins/openclaw';
-
-export default createSanitizePlugin({ mode: 'sanitize' });`
+    autoInstall: true,
+    usage: `Plugin will be auto-installed to ~/.openclaw/extensions/
+Run 'openclaw plugins list' to verify installation.`
   },
   langchain: {
     name: 'LangChain',
@@ -188,6 +188,73 @@ function prompt(rl, question) {
   });
 }
 
+/**
+ * Copy directory recursively (for older Node versions without cpSync recursive)
+ */
+function copyDirRecursive(src, dest) {
+  mkdirSync(dest, { recursive: true });
+  const entries = readdirSync(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const srcPath = join(src, entry.name);
+    const destPath = join(dest, entry.name);
+    if (entry.isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else {
+      writeFileSync(destPath, readFileSync(srcPath));
+    }
+  }
+}
+
+/**
+ * Auto-install OpenClaw plugin to ~/.openclaw/extensions/
+ */
+function installOpenClawPlugin() {
+  const homedir = process.env.HOME || process.env.USERPROFILE;
+  if (!homedir) {
+    error('Could not determine home directory');
+    return false;
+  }
+
+  const extensionsDir = join(homedir, '.openclaw', 'extensions');
+  const pluginDir = join(extensionsDir, 'xswarm-ai-sanitize');
+  const sourcePluginDir = join(__dirname, '..', 'plugins', 'openclaw');
+  const sourceSrcDir = join(__dirname, '..', 'src');
+
+  try {
+    // Create extensions directory if needed
+    mkdirSync(extensionsDir, { recursive: true });
+
+    // Copy plugin files
+    info('Copying plugin files...');
+    copyDirRecursive(sourcePluginDir, pluginDir);
+
+    // Copy src/ for sanitize core (adjusting import path in index.js)
+    info('Copying sanitize core...');
+    const srcDestDir = join(pluginDir, 'src');
+    copyDirRecursive(sourceSrcDir, srcDestDir);
+
+    // Update the import path in the copied index.js
+    const indexPath = join(pluginDir, 'index.js');
+    let indexContent = readFileSync(indexPath, 'utf8');
+    indexContent = indexContent.replace(
+      "import sanitize from '../../src/index.js';",
+      "import sanitize from './src/index.js';"
+    );
+    writeFileSync(indexPath, indexContent);
+
+    log();
+    success(`Installed to ${pluginDir}`);
+    log();
+    info('Verify with: openclaw plugins list');
+    info('The plugin will sanitize secrets from tool results automatically.');
+
+    return true;
+  } catch (e) {
+    error(`Installation failed: ${e.message}`);
+    return false;
+  }
+}
+
 // Main wizard
 async function runWizard() {
   const rl = createInterface({
@@ -249,14 +316,25 @@ async function runWizard() {
     log();
     log(`${colors.bold}${fw.name} Integration${colors.reset}`);
     log();
-    log(`${colors.dim}1. Install the package (if not already):${colors.reset}`);
-    log(`   npm install xswarm-ai-sanitize`);
-    log();
-    log(`${colors.dim}2. Add to your code:${colors.reset}`);
-    log();
-    log(`${colors.cyan}${fw.usage}${colors.reset}`);
-    log();
-    success('Plugin ready to use!');
+
+    // Handle auto-install frameworks (OpenClaw)
+    if (fw.autoInstall) {
+      info('Auto-installing plugin...');
+      log();
+      if (installOpenClawPlugin()) {
+        success('Plugin installed successfully!');
+      }
+    } else {
+      // Manual install instructions for other frameworks
+      log(`${colors.dim}1. Install the package (if not already):${colors.reset}`);
+      log(`   npm install xswarm-ai-sanitize`);
+      log();
+      log(`${colors.dim}2. Add to your code:${colors.reset}`);
+      log();
+      log(`${colors.cyan}${fw.usage}${colors.reset}`);
+      log();
+      success('Plugin ready to use!');
+    }
   } else {
     error('Invalid selection');
   }
