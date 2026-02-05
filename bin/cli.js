@@ -9,6 +9,7 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { createInterface } from 'readline';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 import sanitize from '../src/index.js';
 import { patternCount } from '../src/detectors.js';
 
@@ -19,6 +20,7 @@ const FRAMEWORKS = {
   openclaw: {
     name: 'OpenClaw',
     detectPackage: 'openclaw',
+    cliCommand: 'openclaw',
     plugin: 'xswarm-ai-sanitize/plugins/openclaw',
     usage: `import createSanitizePlugin from 'xswarm-ai-sanitize/plugins/openclaw';
 
@@ -28,6 +30,7 @@ export default createSanitizePlugin({ mode: 'sanitize' });`
     name: 'LangChain',
     detectPackage: 'langchain',
     altPackage: '@langchain/core',
+    cliCommand: 'langchain',
     plugin: 'xswarm-ai-sanitize/plugins/langchain',
     usage: `import { createSanitizeCallback } from 'xswarm-ai-sanitize/plugins/langchain';
 
@@ -62,6 +65,7 @@ const result = await generateText({
   nanobot: {
     name: 'Nanobot',
     detectPackage: 'nanobot',
+    cliCommand: 'nanobot',
     plugin: 'xswarm-ai-sanitize/plugins/nanobot',
     usage: `// In your nanobot.yaml or agent config:
 // Add xswarm-ai-sanitize as a filter
@@ -96,31 +100,82 @@ function info(msg) { console.log(`${colors.blue}ℹ${colors.reset} ${msg}`); }
 function warn(msg) { console.log(`${colors.yellow}⚠${colors.reset} ${msg}`); }
 function error(msg) { console.log(`${colors.red}✗${colors.reset} ${msg}`); }
 
-// Detect which frameworks are installed
-function detectFrameworks(projectPath) {
-  const detected = [];
-  const pkgPath = join(projectPath, 'package.json');
+// Check common paths for framework installations
+function checkCommonPaths(framework) {
+  const homedir = process.env.HOME || process.env.USERPROFILE || '';
+  const paths = [
+    // Common project locations
+    join(homedir, 'Desktop', 'skills', framework),
+    join(homedir, 'projects', framework),
+    join(homedir, 'dev', framework),
+    join(homedir, 'code', framework),
+    join(homedir, framework),
+    // Global node_modules
+    join(homedir, '.npm-global', 'lib', 'node_modules', framework),
+    '/usr/local/lib/node_modules/' + framework,
+    // pnpm global
+    join(homedir, 'Library', 'pnpm', 'global', '5', 'node_modules', framework),
+  ];
 
-  if (!existsSync(pkgPath)) {
-    return detected;
+  for (const p of paths) {
+    if (existsSync(p)) return true;
   }
+  return false;
+}
 
-  try {
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
-    const allDeps = {
-      ...pkg.dependencies,
-      ...pkg.devDependencies,
-      ...pkg.peerDependencies
-    };
+// Detect which frameworks are installed system-wide
+function detectFrameworks() {
+  const detected = [];
 
-    for (const [key, framework] of Object.entries(FRAMEWORKS)) {
-      if (allDeps[framework.detectPackage] ||
-          (framework.altPackage && allDeps[framework.altPackage])) {
-        detected.push(key);
+  for (const [key, framework] of Object.entries(FRAMEWORKS)) {
+    let found = false;
+
+    // Check if CLI command exists (e.g., 'openclaw', 'langchain')
+    if (framework.cliCommand) {
+      try {
+        execSync(`which ${framework.cliCommand}`, { stdio: 'pipe' });
+        found = true;
+      } catch {}
+    }
+
+    // Check global npm installation
+    if (!found) {
+      try {
+        execSync(`npm list -g ${framework.detectPackage} --depth=0 2>/dev/null`, { stdio: 'pipe' });
+        found = true;
+      } catch {}
+    }
+
+    // Check common installation paths
+    if (!found && checkCommonPaths(framework.detectPackage)) {
+      found = true;
+    }
+
+    // Check pnpm global
+    if (!found) {
+      try {
+        execSync(`pnpm list -g ${framework.detectPackage} --depth=0 2>/dev/null`, { stdio: 'pipe' });
+        found = true;
+      } catch {}
+    }
+
+    // Check current directory package.json as fallback
+    if (!found) {
+      const pkgPath = join(process.cwd(), 'package.json');
+      if (existsSync(pkgPath)) {
+        try {
+          const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+          const allDeps = { ...pkg.dependencies, ...pkg.devDependencies, ...pkg.peerDependencies };
+          if (allDeps[framework.detectPackage] || (framework.altPackage && allDeps[framework.altPackage])) {
+            found = true;
+          }
+        } catch {}
       }
     }
-  } catch (e) {
-    // Ignore parse errors
+
+    if (found) {
+      detected.push(key);
+    }
   }
 
   return detected;
@@ -145,16 +200,15 @@ async function runWizard() {
   log(`${colors.dim}${patternCount} patterns + Shannon entropy analysis${colors.reset}`);
   log();
 
-  const projectPath = process.cwd();
-  const detected = detectFrameworks(projectPath);
+  info('Scanning for installed AI frameworks...');
+  const detected = detectFrameworks();
 
   if (detected.length > 0) {
-    success(`Detected frameworks: ${detected.map(k => FRAMEWORKS[k].name).join(', ')}`);
-    log();
+    success(`Found: ${detected.map(k => FRAMEWORKS[k].name).join(', ')}`);
   } else {
-    info('No AI frameworks detected in current directory.');
-    log();
+    info('No AI frameworks detected on this system.');
   }
+  log();
 
   // Show menu
   log(`${colors.bold}Available integrations:${colors.reset}`);
