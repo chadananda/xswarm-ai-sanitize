@@ -99,11 +99,31 @@ export function detectAll(text) {
 export function redactSecrets(text, secrets) {
   if (!text || !secrets || secrets.length === 0) return text;
 
-  // Sort by position descending to avoid position shifts
-  const sorted = [...secrets].sort((a, b) => b.position - a.position);
+  // Sort by position ascending, then by length descending (prefer longer matches)
+  const sorted = [...secrets].sort((a, b) => {
+    if (a.position !== b.position) return a.position - b.position;
+    return b.value.length - a.value.length;
+  });
 
-  let result = text;
+  // De-duplicate overlapping matches - keep earliest/longest for each region
+  const nonOverlapping = [];
+  let lastEnd = -1;
+
   for (const secret of sorted) {
+    const start = secret.position;
+    const end = start + secret.value.length;
+
+    // Skip if this overlaps with previous match
+    if (start < lastEnd) continue;
+
+    nonOverlapping.push(secret);
+    lastEnd = end;
+  }
+
+  // Now redact in reverse order to avoid position shifts
+  let result = text;
+  for (let i = nonOverlapping.length - 1; i >= 0; i--) {
+    const secret = nonOverlapping[i];
     const before = result.slice(0, secret.position);
     const after = result.slice(secret.position + secret.value.length);
     result = before + `[REDACTED:${secret.name}]` + after;
