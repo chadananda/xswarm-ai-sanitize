@@ -245,8 +245,25 @@ function installOpenClawPlugin() {
     log();
     success(`Installed to ${pluginDir}`);
     log();
-    info('Verify with: openclaw plugins list');
-    info('The plugin will sanitize secrets from tool results automatically.');
+
+    // Verify with OpenClaw CLI if available
+    try {
+      const result = execSync('openclaw plugins list 2>&1', { encoding: 'utf8', timeout: 10000 });
+      if (result.includes('xswarm-ai-sanitize') && result.includes('loaded')) {
+        success('OpenClaw detected the plugin and loaded it automatically!');
+        log();
+        info('The plugin will sanitize secrets from tool results before they reach agent memory.');
+        info('Detected patterns: AWS keys, GitHub tokens, API keys, database URLs, and 600+ more.');
+      } else if (result.includes('xswarm-ai-sanitize')) {
+        warn('Plugin installed but not yet loaded. You may need to restart the OpenClaw gateway.');
+        info('Run: openclaw gateway restart');
+      } else {
+        info('Run "openclaw plugins list" to verify the plugin is detected.');
+      }
+    } catch {
+      // OpenClaw CLI not available or failed
+      info('Run "openclaw plugins list" to verify the plugin is detected.');
+    }
 
     return true;
   } catch (e) {
