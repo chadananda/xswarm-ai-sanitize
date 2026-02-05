@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "type": "module",
   "bin": {
-    "xswarm-ai-sanitize": "./bin/cli.js"
+    "xswarm-ai-sanitize": "bin/cli.js"
   },
   "exports": {
     ".": "./src/index.js",
