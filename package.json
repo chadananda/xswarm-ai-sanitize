@@ -1,7 +1,7 @@
 {
   "name": "xswarm-ai-sanitize",
-  "version": "1.0.0",
-  "description": "Fast regex secret detection and redaction — 600+ patterns plus Shannon entropy analysis, zero dependencies",
+  "version": "1.1.0",
+  "description": "Secret detection for AI agents — 600+ patterns, plugins for LangChain, LlamaIndex, Vercel AI, OpenClaw, Nanobot",
   "main": "src/index.js",
   "type": "module",
   "bin": {
@@ -10,6 +10,11 @@
   "exports": {
     ".": "./src/index.js",
     "./plugins/openclaw": "./plugins/openclaw.js",
+    "./plugins/langchain": "./plugins/langchain.js",
+    "./plugins/llamaindex": "./plugins/llamaindex.js",
+    "./plugins/vercel-ai": "./plugins/vercel-ai.js",
+    "./plugins/nanobot": "./plugins/nanobot.js",
+    "./plugins/xswarm": "./plugins/xswarm.js",
     "./plugins/watcher": "./plugins/watcher.js"
   },
   "files": [
@@ -25,16 +30,19 @@
     "prepublishOnly": "npm test"
   },
   "keywords": [
-    "security",
+    "ai-agent",
     "secret-detection",
-    "credential-detection",
-    "regex",
+    "langchain",
+    "llamaindex",
+    "vercel-ai",
+    "openclaw",
+    "nanobot",
+    "security",
     "redaction",
     "sanitization",
+    "credential-detection",
     "dlp",
-    "entropy",
-    "xswarm",
-    "openclaw"
+    "xswarm"
   ],
   "author": "xSwarm Team",
   "license": "MIT",

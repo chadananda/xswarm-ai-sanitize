@@ -2,194 +2,336 @@
 
 /**
  * xswarm-ai-sanitize CLI
- * Command-line tool for detecting and redacting secrets/credentials
+ * Setup wizard for integrating secret sanitization into AI agent frameworks
  */
 
-import { readFileSync } from 'fs';
-import { stdin as stdinStream } from 'process';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { createInterface } from 'readline';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import sanitize from '../src/index.js';
 import { patternCount } from '../src/detectors.js';
 
-const HELP_TEXT = `
-xswarm-ai-sanitize - Regex secret detection & redaction
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-Usage:
-  xswarm-ai-sanitize [options] [file]
-  cat file.txt | xswarm-ai-sanitize [options]
+// Framework detection and integration configs
+const FRAMEWORKS = {
+  openclaw: {
+    name: 'OpenClaw',
+    detectPackage: 'openclaw',
+    plugin: 'xswarm-ai-sanitize/plugins/openclaw',
+    usage: `import createSanitizePlugin from 'xswarm-ai-sanitize/plugins/openclaw';
 
-Options:
-  -m, --mode <mode>           Mode: 'sanitize' (default) or 'block'
-  -b, --block                 Enable block mode (reject if secrets found)
-  -s, --secrets <n>           Block threshold for secrets (default: 3)
-  -h, --high-severity <n>     Block threshold for high-severity threats (default: 1)
-  -q, --quiet                 Suppress statistics output
-  -v, --verbose               Show detailed threat information
-  --help                      Show this help message
+export default createSanitizePlugin({ mode: 'sanitize' });`
+  },
+  langchain: {
+    name: 'LangChain',
+    detectPackage: 'langchain',
+    altPackage: '@langchain/core',
+    plugin: 'xswarm-ai-sanitize/plugins/langchain',
+    usage: `import { createSanitizeCallback } from 'xswarm-ai-sanitize/plugins/langchain';
 
-Examples:
-  # Sanitize a file (redact secrets)
-  xswarm-ai-sanitize config.yml
+const chain = new LLMChain({
+  llm,
+  prompt,
+  callbacks: [createSanitizeCallback({ mode: 'sanitize' })]
+});`
+  },
+  llamaindex: {
+    name: 'LlamaIndex',
+    detectPackage: 'llamaindex',
+    plugin: 'xswarm-ai-sanitize/plugins/llamaindex',
+    usage: `import { createSanitizeTransform } from 'xswarm-ai-sanitize/plugins/llamaindex';
 
-  # Read from stdin
-  cat .env | xswarm-ai-sanitize
+const queryEngine = index.asQueryEngine({
+  responseSynthesizer: createSanitizeTransform(responseSynthesizer)
+});`
+  },
+  'vercel-ai': {
+    name: 'Vercel AI SDK',
+    detectPackage: 'ai',
+    plugin: 'xswarm-ai-sanitize/plugins/vercel-ai',
+    usage: `import { sanitizeMiddleware } from 'xswarm-ai-sanitize/plugins/vercel-ai';
 
-  # Block mode (exit 1 if secrets detected)
-  xswarm-ai-sanitize --block --secrets 1 production.log
+const result = await generateText({
+  model,
+  prompt,
+  experimental_middleware: sanitizeMiddleware({ mode: 'sanitize' })
+});`
+  },
+  nanobot: {
+    name: 'Nanobot',
+    detectPackage: 'nanobot',
+    plugin: 'xswarm-ai-sanitize/plugins/nanobot',
+    usage: `// In your nanobot.yaml or agent config:
+// Add xswarm-ai-sanitize as a filter
 
-  # Quiet mode (only output sanitized content)
-  xswarm-ai-sanitize -q < input.txt > output.txt
+import { createSanitizeFilter } from 'xswarm-ai-sanitize/plugins/nanobot';
+export default createSanitizeFilter({ mode: 'sanitize' });`
+  },
+  xswarm: {
+    name: 'xSwarm',
+    detectPackage: 'xswarm',
+    plugin: 'xswarm-ai-sanitize/plugins/xswarm',
+    usage: `// xSwarm integration coming soon
+// Visit https://xswarm.ai for updates`
+  }
+};
 
-Detection:
-  - ${patternCount} secret regex patterns + Shannon entropy analysis
-  - Zero dependencies, zero external API calls
-  - <5ms processing time for typical documents
-`;
+// ANSI colors
+const colors = {
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  cyan: '\x1b[36m',
+  red: '\x1b[31m'
+};
 
-// Parse command-line arguments
-function parseArgs(argv) {
-  const args = {
+function log(msg = '') { console.log(msg); }
+function success(msg) { console.log(`${colors.green}✓${colors.reset} ${msg}`); }
+function info(msg) { console.log(`${colors.blue}ℹ${colors.reset} ${msg}`); }
+function warn(msg) { console.log(`${colors.yellow}⚠${colors.reset} ${msg}`); }
+function error(msg) { console.log(`${colors.red}✗${colors.reset} ${msg}`); }
+
+// Detect which frameworks are installed
+function detectFrameworks(projectPath) {
+  const detected = [];
+  const pkgPath = join(projectPath, 'package.json');
+
+  if (!existsSync(pkgPath)) {
+    return detected;
+  }
+
+  try {
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    const allDeps = {
+      ...pkg.dependencies,
+      ...pkg.devDependencies,
+      ...pkg.peerDependencies
+    };
+
+    for (const [key, framework] of Object.entries(FRAMEWORKS)) {
+      if (allDeps[framework.detectPackage] ||
+          (framework.altPackage && allDeps[framework.altPackage])) {
+        detected.push(key);
+      }
+    }
+  } catch (e) {
+    // Ignore parse errors
+  }
+
+  return detected;
+}
+
+// Interactive prompt helper
+function prompt(rl, question) {
+  return new Promise(resolve => {
+    rl.question(question, resolve);
+  });
+}
+
+// Main wizard
+async function runWizard() {
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  log();
+  log(`${colors.bold}${colors.cyan}xswarm-ai-sanitize${colors.reset} — Secret Detection for AI Agents`);
+  log(`${colors.dim}${patternCount} patterns + Shannon entropy analysis${colors.reset}`);
+  log();
+
+  const projectPath = process.cwd();
+  const detected = detectFrameworks(projectPath);
+
+  if (detected.length > 0) {
+    success(`Detected frameworks: ${detected.map(k => FRAMEWORKS[k].name).join(', ')}`);
+    log();
+  } else {
+    info('No AI frameworks detected in current directory.');
+    log();
+  }
+
+  // Show menu
+  log(`${colors.bold}Available integrations:${colors.reset}`);
+  log();
+
+  const frameworkKeys = Object.keys(FRAMEWORKS);
+  frameworkKeys.forEach((key, i) => {
+    const fw = FRAMEWORKS[key];
+    const isDetected = detected.includes(key);
+    const marker = isDetected ? `${colors.green}●${colors.reset}` : `${colors.dim}○${colors.reset}`;
+    log(`  ${marker} ${i + 1}) ${fw.name}${isDetected ? ` ${colors.dim}(installed)${colors.reset}` : ''}`);
+  });
+
+  log();
+  log(`  ${colors.dim}s) Sanitize text (CLI mode)${colors.reset}`);
+  log(`  ${colors.dim}q) Quit${colors.reset}`);
+  log();
+
+  const answer = await prompt(rl, `${colors.bold}Select integration (1-${frameworkKeys.length}, s, or q):${colors.reset} `);
+
+  if (answer.toLowerCase() === 'q') {
+    log('Goodbye!');
+    rl.close();
+    process.exit(0);
+  }
+
+  if (answer.toLowerCase() === 's') {
+    rl.close();
+    await runSanitizeCLI();
+    return;
+  }
+
+  const idx = parseInt(answer, 10) - 1;
+  if (idx >= 0 && idx < frameworkKeys.length) {
+    const key = frameworkKeys[idx];
+    const fw = FRAMEWORKS[key];
+
+    log();
+    log(`${colors.bold}${fw.name} Integration${colors.reset}`);
+    log();
+    log(`${colors.dim}1. Install the package (if not already):${colors.reset}`);
+    log(`   npm install xswarm-ai-sanitize`);
+    log();
+    log(`${colors.dim}2. Add to your code:${colors.reset}`);
+    log();
+    log(`${colors.cyan}${fw.usage}${colors.reset}`);
+    log();
+    success('Plugin ready to use!');
+  } else {
+    error('Invalid selection');
+  }
+
+  rl.close();
+}
+
+// CLI sanitize mode (original functionality)
+async function runSanitizeCLI() {
+  const args = process.argv.slice(2).filter(a => a !== 'sanitize' && a !== 's');
+
+  const options = {
     mode: 'sanitize',
-    blockThreshold: {
-      secrets: 3,
-      highSeverity: 1
-    },
+    blockThreshold: { secrets: 3, highSeverity: 1 },
     quiet: false,
-    verbose: false,
     file: null
   };
 
-  for (let i = 2; i < argv.length; i++) {
-    const arg = argv[i];
-    const next = argv[i + 1];
-
-    if (arg === '--help') {
-      console.log(HELP_TEXT);
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--help' || arg === '-h') {
+      showSanitizeHelp();
       process.exit(0);
-    } else if (arg === '--mode' || arg === '-m') {
-      if (!next || !['block', 'sanitize'].includes(next)) {
-        console.error('Error: --mode must be "block" or "sanitize"');
-        process.exit(1);
-      }
-      args.mode = next;
-      i++;
     } else if (arg === '--block' || arg === '-b') {
-      args.mode = 'block';
-    } else if (arg === '--secrets' || arg === '-s') {
-      args.blockThreshold.secrets = parseInt(next, 10);
-      i++;
-    } else if (arg === '--high-severity' || arg === '-h') {
-      args.blockThreshold.highSeverity = parseInt(next, 10);
-      i++;
+      options.mode = 'block';
     } else if (arg === '--quiet' || arg === '-q') {
-      args.quiet = true;
-    } else if (arg === '--verbose' || arg === '-v') {
-      args.verbose = true;
+      options.quiet = true;
+    } else if (arg === '--secrets' || arg === '-s') {
+      options.blockThreshold.secrets = parseInt(args[++i], 10);
     } else if (!arg.startsWith('-')) {
-      args.file = arg;
+      options.file = arg;
     }
   }
 
-  return args;
-}
-
-// Read input from file or stdin
-async function readInput(file) {
-  if (file) {
+  // Read input
+  let input;
+  if (options.file) {
     try {
-      return readFileSync(file, 'utf8');
-    } catch (err) {
-      console.error(`Error reading file: ${err.message}`);
+      input = readFileSync(options.file, 'utf8');
+    } catch (e) {
+      error(`Cannot read file: ${options.file}`);
       process.exit(1);
     }
-  }
-
-  // Read from stdin
-  if (stdinStream.isTTY) {
-    console.error('Error: No input provided. Use --help for usage information.');
+  } else if (!process.stdin.isTTY) {
+    input = await readStdin();
+  } else {
+    error('No input provided. Pipe text or specify a file.');
+    showSanitizeHelp();
     process.exit(1);
   }
 
-  return new Promise((resolve, reject) => {
-    let data = '';
-    stdinStream.setEncoding('utf8');
-    stdinStream.on('data', chunk => data += chunk);
-    stdinStream.on('end', () => resolve(data));
-    stdinStream.on('error', reject);
-  });
-}
+  // Sanitize
+  const result = sanitize(input, options);
 
-// Format threat details for verbose output
-function formatThreats(threats) {
-  if (!threats.details || threats.details.length === 0) {
-    return '';
-  }
-
-  const lines = ['\nThreats detected:'];
-  const grouped = {};
-
-  for (const threat of threats.details) {
-    if (!grouped[threat.type]) {
-      grouped[threat.type] = [];
-    }
-    grouped[threat.type].push(threat);
-  }
-
-  for (const [type, items] of Object.entries(grouped)) {
-    const severity = items[0].severity || 'unknown';
-    lines.push(`  - ${type} (${severity}): ${items.length}x`);
-  }
-
-  return lines.join('\n');
-}
-
-// Main CLI logic
-async function main() {
-  const args = parseArgs(process.argv);
-  const input = await readInput(args.file);
-
-  // Run sanitization (synchronous)
-  const result = sanitize(input, {
-    mode: args.mode,
-    blockThreshold: args.blockThreshold
-  });
-
-  // Handle BLOCK mode
-  if (args.mode === 'block' && result.blocked) {
-    if (!args.quiet) {
+  if (options.mode === 'block' && result.blocked) {
+    if (!options.quiet) {
       console.error(`\nBLOCKED: ${result.reason}`);
-      if (args.verbose) {
-        console.error(formatThreats(result.threats));
-      }
     }
     process.exit(1);
   }
 
-  // Output sanitized content
   process.stdout.write(result.sanitized);
 
-  // Output statistics (to stderr, so it doesn't pollute piped output)
-  if (!args.quiet) {
-    const stats = [];
-
-    if (result.threats.secrets > 0) {
-      stats.push(`${result.threats.secrets} secret(s) redacted`);
-    }
-
-    if (stats.length > 0) {
-      console.error(`\n${stats.join(', ')}`);
-      if (args.verbose) {
-        console.error(formatThreats(result.threats));
-      }
-    } else {
-      console.error('\nNo threats detected - content is clean');
-    }
+  if (!options.quiet && result.threats.secrets > 0) {
+    console.error(`\n${result.threats.secrets} secret(s) redacted`);
   }
+}
 
+function readStdin() {
+  return new Promise((resolve) => {
+    let data = '';
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', chunk => data += chunk);
+    process.stdin.on('end', () => resolve(data));
+  });
+}
+
+function showSanitizeHelp() {
+  log(`
+${colors.bold}xswarm-ai-sanitize sanitize${colors.reset} — CLI Secret Redaction
+
+${colors.bold}Usage:${colors.reset}
+  xswarm-ai-sanitize sanitize [options] [file]
+  cat file.txt | xswarm-ai-sanitize sanitize [options]
+
+${colors.bold}Options:${colors.reset}
+  -b, --block     Block mode (exit 1 if secrets found)
+  -s, --secrets   Block threshold (default: 3)
+  -q, --quiet     Suppress statistics
+  -h, --help      Show this help
+
+${colors.bold}Examples:${colors.reset}
+  echo "key=sk-ant-xxx" | xswarm-ai-sanitize sanitize -q
+  xswarm-ai-sanitize sanitize -b config.yml
+`);
+}
+
+function showMainHelp() {
+  log(`
+${colors.bold}xswarm-ai-sanitize${colors.reset} — Secret Detection for AI Agents
+
+${colors.bold}Usage:${colors.reset}
+  npx xswarm-ai-sanitize           Interactive setup wizard
+  npx xswarm-ai-sanitize sanitize  CLI text sanitization
+
+${colors.bold}Features:${colors.reset}
+  • ${patternCount} secret patterns (AWS, GitHub, Stripe, etc.)
+  • Shannon entropy analysis for unknown secrets
+  • Plugins for OpenClaw, LangChain, LlamaIndex, Vercel AI, and more
+  • Zero dependencies, fully synchronous
+
+${colors.bold}Learn more:${colors.reset} https://github.com/chadananda/xswarm-ai-sanitize
+`);
+}
+
+// Main entry
+const args = process.argv.slice(2);
+
+if (args.includes('--help') && !args.includes('sanitize')) {
+  showMainHelp();
   process.exit(0);
 }
 
-// Run CLI
-main().catch(err => {
-  console.error(`Error: ${err.message}`);
-  process.exit(1);
-});
+if (args[0] === 'sanitize' || args[0] === 's' || !process.stdin.isTTY) {
+  // If stdin has data, go directly to sanitize mode
+  if (!process.stdin.isTTY && args[0] !== 'sanitize' && args[0] !== 's') {
+    args.unshift('sanitize');
+  }
+  runSanitizeCLI();
+} else {
+  runWizard();
+}

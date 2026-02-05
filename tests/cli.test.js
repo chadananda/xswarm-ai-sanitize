@@ -28,12 +28,18 @@ describe('CLI - Help and Usage', () => {
     assert.strictEqual(result.exitCode, 0);
     assert.match(result.stdout, /xswarm-ai-sanitize/);
     assert.match(result.stdout, /Usage:/);
+  });
+
+  it('should display sanitize help with sanitize --help', () => {
+    const result = runCLI(['sanitize', '--help']);
+    assert.strictEqual(result.exitCode, 0);
+    assert.match(result.stdout, /sanitize/);
     assert.match(result.stdout, /Options:/);
   });
 
   it('should accept empty input via pipe', () => {
     // When stdin is piped (not TTY), CLI reads from it - empty input is valid
-    const result = runCLI(['-q'], '');
+    const result = runCLI(['sanitize', '-q'], '');
     assert.strictEqual(result.exitCode, 0);
     assert.strictEqual(result.stdout, '');
   });
@@ -286,15 +292,15 @@ describe('CLI - Stdin Input', () => {
 });
 
 describe('CLI - Options Parsing', () => {
-  it('should accept --mode sanitize', () => {
+  it('should default to sanitize mode', () => {
     const input = 'const x = 1;';
-    const result = runCLI(['--mode', 'sanitize', '-q'], input);
+    const result = runCLI(['-q'], input);
     assert.strictEqual(result.exitCode, 0);
   });
 
-  it('should accept --mode block', () => {
+  it('should accept --block flag', () => {
     const input = 'const x = 1;';
-    const result = runCLI(['--mode', 'block', '-q'], input);
+    const result = runCLI(['--block', '-q'], input);
     assert.strictEqual(result.exitCode, 0);
   });
 
@@ -304,10 +310,11 @@ describe('CLI - Options Parsing', () => {
     assert.strictEqual(result.exitCode, 0);
   });
 
-  it('should reject invalid mode', () => {
+  it('should ignore unknown flags and continue', () => {
     const input = 'const x = 1;';
-    const result = runCLI(['--mode', 'invalid', '-q'], input);
-    assert.notStrictEqual(result.exitCode, 0);
+    const result = runCLI(['--unknown-flag', '-q'], input);
+    // Unknown flags are ignored, input still processed
+    assert.strictEqual(result.exitCode, 0);
   });
 });
 
