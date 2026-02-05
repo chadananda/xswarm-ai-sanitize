@@ -23,7 +23,7 @@ export default function createOpenClawPlugin(config = {}) {
 
   return {
     name: 'xswarm-ai-sanitize',
-    version: '1.0.0',
+    version: '1.2.2',
 
     /**
      * Hook that runs after tool execution, before result is returned to agent
