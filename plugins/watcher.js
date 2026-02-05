@@ -7,7 +7,6 @@ import sanitize from '../src/index.js';
 import { readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
 
 let chokidar;
 try {
@@ -18,10 +17,9 @@ try {
 
 /**
  * Create file watcher for agent memory files
- * @param {string[]} patterns - Glob patterns to watch (e.g., ['~/.openclaw/workspace/memory/**\/*.md'])
+ * @param {string[]} patterns - Glob patterns to watch
  * @param {Object} config - Sanitization configuration
  * @param {string} [config.mode='sanitize'] - Always use 'sanitize' mode for memory files
- * @param {Object} [config.ai] - AI provider configuration
  * @returns {Object} Watcher instance with close() method
  */
 export default function createWatcher(patterns, config = {}) {
@@ -30,8 +28,7 @@ export default function createWatcher(patterns, config = {}) {
   }
 
   const defaultConfig = {
-    mode: 'sanitize', // Always sanitize, never block memory files
-    ai: config.ai || { enabled: false }
+    mode: 'sanitize' // Always sanitize, never block memory files
   };
 
   // Expand home directory in patterns
@@ -61,7 +58,7 @@ export default function createWatcher(patterns, config = {}) {
 
     try {
       const content = await readFile(filePath, 'utf-8');
-      const result = await sanitize(content, defaultConfig);
+      const result = sanitize(content, defaultConfig);
 
       // Only rewrite if changes were made
       if (result.sanitized !== content) {

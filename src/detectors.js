@@ -17,11 +17,6 @@ const secretPatterns = patternsData.secrets.map(p => ({
   compiled: new RegExp(p.regex, 'gi')
 }));
 
-const injectionPatterns = patternsData.injections.map(p => ({
-  ...p,
-  compiled: new RegExp(p.regex, 'gi')
-}));
-
 /**
  * Detect secrets in text using pattern matching and entropy analysis
  */
@@ -80,50 +75,19 @@ export function detectSecrets(text) {
 }
 
 /**
- * Detect injection attempts in text
- */
-export function detectInjections(text) {
-  if (!text) return [];
-
-  const findings = [];
-
-  for (const pattern of injectionPatterns) {
-    pattern.compiled.lastIndex = 0; // Reset regex state
-    let match;
-
-    while ((match = pattern.compiled.exec(text)) !== null) {
-      const value = match[0];
-      const position = match.index;
-
-      findings.push({
-        name: pattern.name,
-        severity: pattern.severity,
-        value,
-        position
-      });
-    }
-  }
-
-  return findings;
-}
-
-/**
- * Detect all threats (secrets and injections)
+ * Detect all secrets in text
  */
 export function detectAll(text) {
   const secrets = detectSecrets(text);
-  const injections = detectInjections(text);
 
-  const highSeverity = [...secrets, ...injections].filter(
+  const highSeverity = secrets.filter(
     item => item.severity === 'critical' || item.severity === 'high'
   ).length;
 
   return {
     secrets,
-    injections,
     counts: {
       secrets: secrets.length,
-      injections: injections.length,
       highSeverity
     }
   };
@@ -148,26 +112,5 @@ export function redactSecrets(text, secrets) {
   return result;
 }
 
-/**
- * Remove injection patterns from text
- */
-export function removeInjections(text, injections) {
-  if (!text || !injections || injections.length === 0) return text;
-
-  // Sort by position descending to avoid position shifts
-  const sorted = [...injections].sort((a, b) => b.position - a.position);
-
-  let result = text;
-  for (const injection of sorted) {
-    const before = result.slice(0, injection.position);
-    const after = result.slice(injection.position + injection.value.length);
-    result = before + after;
-  }
-
-  // Clean up excessive whitespace
-  result = result.replace(/\n{3,}/g, '\n\n'); // Max 2 newlines
-  result = result.replace(/ {2,}/g, ' '); // Single spaces
-  result = result.trim();
-
-  return result;
-}
+/** Number of compiled secret patterns */
+export const patternCount = secretPatterns.length;

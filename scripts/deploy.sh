@@ -1,242 +1,136 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# npm Deployment Script for xswarm-ai-sanitize
-# Handles testing, versioning, and publishing with new npm security requirements
+#──────────────────────────────────────────────
+# xswarm-ai-sanitize deploy script
+# Usage:
+#   ./scripts/deploy.sh          # publish current version
+#   ./scripts/deploy.sh patch    # bump patch, publish
+#   ./scripts/deploy.sh minor    # bump minor, publish
+#   ./scripts/deploy.sh major    # bump major, publish
+#   ./scripts/deploy.sh --dry    # dry run (no actual publish)
+#──────────────────────────────────────────────
 
-set -e  # Exit on error
+# ── Fix nvm environment ──────────────────────
+# Unset broken lazy-load shell functions and set PATH directly
+unset -f node npm npx 2>/dev/null || true
+NODE_DIR="$HOME/.nvm/versions/node/v24.13.0/bin"
+if [ -d "$NODE_DIR" ]; then
+  export PATH="$NODE_DIR:$PATH"
+fi
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-echo -e "${BLUE}======================================"
-echo "xswarm-ai-sanitize Deployment Script"
-echo -e "======================================${NC}"
-echo
-
-# Function to print status messages
-info() {
-  echo -e "${BLUE}→${NC} $1"
-}
-
-success() {
-  echo -e "${GREEN}✓${NC} $1"
-}
-
-error() {
-  echo -e "${RED}✗${NC} $1"
-}
-
-warning() {
-  echo -e "${YELLOW}⚠${NC}  $1"
-}
-
-# Parse arguments
-VERSION_TYPE="${1:-minor}"  # Default to minor version bump
-
-if [[ ! "$VERSION_TYPE" =~ ^(major|minor|patch)$ ]]; then
-  error "Invalid version type: $VERSION_TYPE"
-  echo "Usage: npm run deploy [major|minor|patch]"
-  echo "  major: Breaking changes (1.0.0 → 2.0.0)"
-  echo "  minor: New features (1.0.0 → 1.1.0) [default]"
-  echo "  patch: Bug fixes (1.0.0 → 1.0.1)"
+# Verify node is available
+if ! command -v node &>/dev/null; then
+  echo "Error: node not found. Install Node.js >= 18." >&2
   exit 1
 fi
 
-info "Version bump type: $VERSION_TYPE"
-echo
+NODE_VERSION=$(node -v)
+echo "Using Node $NODE_VERSION ($(which node))"
 
-# Step 1: Check if we're in the right directory
-info "Step 1: Checking directory..."
-if [ ! -f "package.json" ] || [ ! -f "bin/cli.js" ]; then
-  error "Not in xswarm-ai-sanitize root directory"
-  exit 1
-fi
-success "In correct directory"
-echo
+# ── Parse args ───────────────────────────────
+BUMP=""
+DRY_RUN=false
+for arg in "$@"; do
+  case "$arg" in
+    patch|minor|major) BUMP="$arg" ;;
+    --dry) DRY_RUN=true ;;
+    *) echo "Unknown argument: $arg"; exit 1 ;;
+  esac
+done
 
-# Step 2: Check npm version
-info "Step 2: Checking npm version..."
-NPM_VERSION=$(npm --version)
-REQUIRED_VERSION="11.5.1"
-if [ "$(printf '%s\n' "$REQUIRED_VERSION" "$NPM_VERSION" | sort -V | head -n1)" != "$REQUIRED_VERSION" ]; then
-  warning "npm version $NPM_VERSION is older than recommended $REQUIRED_VERSION"
-  echo "  Run: npm install -g npm@latest"
-  read -p "Continue anyway? (y/n) " -n 1 -r
+# ── Preflight checks ────────────────────────
+cd "$(dirname "$0")/.."
+echo ""
+echo "=== Preflight Checks ==="
+
+# 1. Clean git working tree
+if [ -n "$(git status --porcelain)" ]; then
+  echo "Warning: Uncommitted changes detected."
+  git status --short
+  echo ""
+  read -p "Continue anyway? (y/N) " -n 1 -r
   echo
   if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    exit 1
-  fi
-else
-  success "npm version $NPM_VERSION is up to date"
-fi
-echo
-
-# Step 3: Check npm authentication
-info "Step 3: Checking npm authentication..."
-if npm whoami &>/dev/null; then
-  NPM_USER=$(npm whoami)
-  success "Logged in as: $NPM_USER"
-else
-  error "Not logged in to npm"
-  echo
-  info "Please log in to npm (requires 2FA):"
-  npm login
-  if npm whoami &>/dev/null; then
-    success "Successfully logged in as: $(npm whoami)"
-  else
-    error "Login failed"
+    echo "Aborted."
     exit 1
   fi
 fi
-echo
 
-# Step 4: Run functional tests
-info "Step 4: Running functional tests..."
-if [ -f "test-real-functionality.sh" ]; then
-  if ./test-real-functionality.sh; then
-    success "All functional tests passed"
-  else
-    error "Functional tests failed"
-    exit 1
-  fi
+# 2. npm auth check
+echo -n "npm auth: "
+if npm whoami 2>/dev/null; then
+  echo ""
 else
-  warning "Functional test script not found, skipping..."
-fi
-echo
-
-# Step 5: Run npm tests
-info "Step 5: Running npm test suite..."
-if npm test; then
-  success "npm tests passed"
-else
-  error "npm tests failed"
+  echo "Not logged in!"
+  echo ""
+  echo "Run one of these to authenticate:"
+  echo "  npm login                    # interactive browser login"
+  echo "  npm login --auth-type=legacy # username/password login"
+  echo ""
+  echo "Or set a token in ~/.npmrc:"
+  echo '  //registry.npmjs.org/:_authToken=npm_YOUR_TOKEN_HERE'
+  echo ""
   exit 1
 fi
-echo
 
-# Step 6: Check git status
-info "Step 6: Checking git status..."
-if [ -n "$(git status --porcelain)" ]; then
-  warning "Uncommitted changes detected"
-  git status --short
-  echo
-  read -p "Commit changes? (y/n) " -n 1 -r
-  echo
-  if [[ $REPLY =~ ^[Yy]$ ]]; then
-    info "Staging changes..."
-    git add -A
+# 3. Run tests
+echo ""
+echo "=== Running Tests ==="
+node --test tests/**/*.test.js
+echo "All tests passed."
 
-    echo
-    info "Enter commit message (or press Enter for default):"
-    read -r COMMIT_MSG
+# 4. Check what would be published
+echo ""
+echo "=== Package Contents ==="
+npm pack --dry-run 2>&1 | head -40
 
-    if [ -z "$COMMIT_MSG" ]; then
-      COMMIT_MSG="feat: Add CLI tool with AI provider pattern support
+# ── Version bump ─────────────────────────────
+if [ -n "$BUMP" ]; then
+  echo ""
+  echo "=== Bumping version ($BUMP) ==="
+  npm version "$BUMP" --no-git-tag-version
+  NEW_VERSION=$(node -p "require('./package.json').version")
+  echo "New version: $NEW_VERSION"
 
-- Add comprehensive CLI tool accessible via npx
-- Add 4 new AI provider secret patterns (Anthropic, OpenAI, Cohere)
-- Create extensive CLI documentation and test suite (90+ tests)
-- Update README with CLI quick start
-- Zero dependencies, pattern-only mode
-
-Features:
-- Sanitize and block modes
-- File and stdin input
-- Exit codes for CI/CD
-- 48 secret patterns + 27 injection patterns
-"
-    fi
-
-    git commit -m "$COMMIT_MSG"
-    success "Changes committed"
-  else
-    error "Deployment cancelled - commit changes first"
-    exit 1
-  fi
-else
-  success "Working directory is clean"
+  # Commit and tag
+  git add package.json
+  git commit -m "chore: bump version to v$NEW_VERSION"
+  git tag "v$NEW_VERSION"
+  echo "Created git tag v$NEW_VERSION"
 fi
-echo
 
-# Step 7: Get current version
 CURRENT_VERSION=$(node -p "require('./package.json').version")
-info "Step 7: Current version: $CURRENT_VERSION"
-echo
 
-# Step 8: Bump version
-info "Step 8: Bumping $VERSION_TYPE version..."
-NEW_VERSION=$(npm version $VERSION_TYPE --no-git-tag-version)
-success "Version bumped: $CURRENT_VERSION → $NEW_VERSION"
-echo
+# ── Publish ──────────────────────────────────
+echo ""
+echo "=== Publishing v$CURRENT_VERSION ==="
 
-# Step 9: Commit version bump
-info "Step 9: Committing version bump..."
-git add package.json package-lock.json 2>/dev/null || git add package.json
-git commit -m "chore: bump version to $NEW_VERSION"
-success "Version bump committed"
-echo
-
-# Step 10: Create git tag
-info "Step 10: Creating git tag..."
-git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION"
-success "Tag created: $NEW_VERSION"
-echo
-
-# Step 11: Publish to npm
-info "Step 11: Publishing to npm..."
-warning "This will publish to npm registry (requires 2FA code)"
-echo
-read -p "Continue with npm publish? (y/n) " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-  error "Publish cancelled"
-  warning "Version was bumped and committed. To revert:"
-  echo "  git reset --hard HEAD~2"
-  echo "  git tag -d $NEW_VERSION"
-  exit 1
-fi
-
-if npm publish; then
-  success "Successfully published $NEW_VERSION to npm!"
+if [ "$DRY_RUN" = true ]; then
+  echo "[DRY RUN] Would publish xswarm-ai-sanitize@$CURRENT_VERSION"
+  npm publish --dry-run
 else
-  error "npm publish failed"
-  warning "You may need to:"
-  echo "  1. Enable 2FA on your npm account"
-  echo "  2. Check package name availability"
-  echo "  3. Verify npm authentication"
-  exit 1
-fi
-echo
+  read -p "Publish xswarm-ai-sanitize@$CURRENT_VERSION to npm? (y/N) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Aborted."
+    exit 1
+  fi
 
-# Step 12: Push to git
-info "Step 12: Pushing to git..."
-read -p "Push to git remote? (y/n) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-  git push origin master --follow-tags
-  success "Pushed to git with tags"
-else
-  warning "Skipped git push. Don't forget to push manually:"
-  echo "  git push origin master --follow-tags"
-fi
-echo
+  npm publish --access public
+  echo ""
+  echo "Published! https://www.npmjs.com/package/xswarm-ai-sanitize"
 
-# Step 13: Summary
-echo -e "${GREEN}======================================"
-echo "✓ Deployment Complete!"
-echo -e "======================================${NC}"
-echo
-echo "Package: xswarm-ai-sanitize@$NEW_VERSION"
-echo "Published to: https://www.npmjs.com/package/xswarm-ai-sanitize"
-echo
-echo "Users can now run:"
-echo "  npx xswarm-ai-sanitize@latest myfile.txt"
-echo
-echo "Or install:"
-echo "  npm install -g xswarm-ai-sanitize@latest"
-echo
-echo -e "${GREEN}🎉 Success!${NC}"
+  # Push git tag if we bumped
+  if [ -n "$BUMP" ]; then
+    read -p "Push tag v$CURRENT_VERSION to origin? (y/N) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      git push && git push --tags
+      echo "Pushed to origin."
+    fi
+  fi
+fi
+
+echo ""
+echo "Done."

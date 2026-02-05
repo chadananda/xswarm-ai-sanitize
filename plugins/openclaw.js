@@ -9,17 +9,14 @@ import sanitize from '../src/index.js';
  * Create OpenClaw plugin with specified configuration
  * @param {Object} config - Sanitization configuration
  * @param {string} config.mode - 'block' or 'sanitize'
- * @param {Object} [config.ai] - AI provider configuration
  * @param {Object} [config.blockThreshold] - Block thresholds for BLOCK mode
  * @returns {Object} OpenClaw plugin
  */
 export default function createOpenClawPlugin(config = {}) {
   const defaultConfig = {
     mode: config.mode || 'block',
-    ai: config.ai || { enabled: false },
     blockThreshold: config.blockThreshold || {
       secrets: 3,
-      injections: 2,
       highSeverity: 1
     }
   };
@@ -31,7 +28,7 @@ export default function createOpenClawPlugin(config = {}) {
     /**
      * Hook that runs after tool execution, before result is returned to agent
      */
-    async onToolResult(event) {
+    onToolResult(event) {
       const { tool, result } = event;
 
       // Only sanitize external tools (skip internal commands)
@@ -45,7 +42,6 @@ export default function createOpenClawPlugin(config = {}) {
       if (typeof result === 'string') {
         textContent = result;
       } else if (result && typeof result === 'object') {
-        // Handle object results (e.g., { content: '...', metadata: {...} })
         textContent = result.content || result.text || result.body || JSON.stringify(result);
       }
 
@@ -53,8 +49,8 @@ export default function createOpenClawPlugin(config = {}) {
         return event;
       }
 
-      // Sanitize the content
-      const sanitized = await sanitize(textContent, defaultConfig);
+      // Sanitize the content (synchronous)
+      const sanitized = sanitize(textContent, defaultConfig);
 
       // Handle BLOCK mode
       if (sanitized.blocked) {

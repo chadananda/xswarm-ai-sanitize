@@ -2,15 +2,16 @@
 
 /**
  * xswarm-ai-sanitize CLI
- * Command-line tool for detecting and redacting secrets and injection attacks
+ * Command-line tool for detecting and redacting secrets/credentials
  */
 
 import { readFileSync } from 'fs';
 import { stdin as stdinStream } from 'process';
 import sanitize from '../src/index.js';
+import { patternCount } from '../src/detectors.js';
 
 const HELP_TEXT = `
-xswarm-ai-sanitize - Universal security filter for AI agents
+xswarm-ai-sanitize - Regex secret detection & redaction
 
 Usage:
   xswarm-ai-sanitize [options] [file]
@@ -18,34 +19,30 @@ Usage:
 
 Options:
   -m, --mode <mode>           Mode: 'sanitize' (default) or 'block'
-  -b, --block                 Enable block mode (reject malicious content)
+  -b, --block                 Enable block mode (reject if secrets found)
   -s, --secrets <n>           Block threshold for secrets (default: 3)
-  -i, --injections <n>        Block threshold for injections (default: 2)
   -h, --high-severity <n>     Block threshold for high-severity threats (default: 1)
   -q, --quiet                 Suppress statistics output
   -v, --verbose               Show detailed threat information
   --help                      Show this help message
 
 Examples:
-  # Sanitize a file (redact secrets, remove injections)
+  # Sanitize a file (redact secrets)
   xswarm-ai-sanitize config.yml
 
   # Read from stdin
   cat .env | xswarm-ai-sanitize
 
-  # Block mode (exit 1 if threats detected)
+  # Block mode (exit 1 if secrets detected)
   xswarm-ai-sanitize --block --secrets 1 production.log
 
   # Quiet mode (only output sanitized content)
   xswarm-ai-sanitize -q < input.txt > output.txt
 
-Pattern-only mode (zero dependencies, no AI calls):
-  - 44 secret patterns (AWS, GitHub, Stripe, OpenAI, Anthropic, etc.)
-  - 27 injection attack patterns
-  - <5ms processing time
-  - Zero external API calls
-
-For AI-enhanced analysis, use the Node.js API (see README.md)
+Detection:
+  - ${patternCount} secret regex patterns + Shannon entropy analysis
+  - Zero dependencies, zero external API calls
+  - <5ms processing time for typical documents
 `;
 
 // Parse command-line arguments
@@ -54,7 +51,6 @@ function parseArgs(argv) {
     mode: 'sanitize',
     blockThreshold: {
       secrets: 3,
-      injections: 2,
       highSeverity: 1
     },
     quiet: false,
@@ -66,7 +62,7 @@ function parseArgs(argv) {
     const arg = argv[i];
     const next = argv[i + 1];
 
-    if (arg === '--help' || arg === '-h') {
+    if (arg === '--help') {
       console.log(HELP_TEXT);
       process.exit(0);
     } else if (arg === '--mode' || arg === '-m') {
@@ -80,9 +76,6 @@ function parseArgs(argv) {
       args.mode = 'block';
     } else if (arg === '--secrets' || arg === '-s') {
       args.blockThreshold.secrets = parseInt(next, 10);
-      i++;
-    } else if (arg === '--injections' || arg === '-i') {
-      args.blockThreshold.injections = parseInt(next, 10);
       i++;
     } else if (arg === '--high-severity' || arg === '-h') {
       args.blockThreshold.highSeverity = parseInt(next, 10);
@@ -154,8 +147,8 @@ async function main() {
   const args = parseArgs(process.argv);
   const input = await readInput(args.file);
 
-  // Run sanitization (synchronous, pattern-only)
-  const result = sanitize.sync(input, {
+  // Run sanitization (synchronous)
+  const result = sanitize(input, {
     mode: args.mode,
     blockThreshold: args.blockThreshold
   });
@@ -163,7 +156,7 @@ async function main() {
   // Handle BLOCK mode
   if (args.mode === 'block' && result.blocked) {
     if (!args.quiet) {
-      console.error(`\n🚫 BLOCKED: ${result.reason}`);
+      console.error(`\nBLOCKED: ${result.reason}`);
       if (args.verbose) {
         console.error(formatThreats(result.threats));
       }
@@ -181,21 +174,18 @@ async function main() {
     if (result.threats.secrets > 0) {
       stats.push(`${result.threats.secrets} secret(s) redacted`);
     }
-    if (result.threats.injections > 0) {
-      stats.push(`${result.threats.injections} injection(s) removed`);
-    }
 
     if (stats.length > 0) {
-      console.error(`\n✓ ${stats.join(', ')}`);
+      console.error(`\n${stats.join(', ')}`);
       if (args.verbose) {
         console.error(formatThreats(result.threats));
       }
     } else {
-      console.error('\n✓ No threats detected - content is clean');
+      console.error('\nNo threats detected - content is clean');
     }
   }
 
-  process.exit(result.safe ? 0 : 0); // Always exit 0 in sanitize mode
+  process.exit(0);
 }
 
 // Run CLI
