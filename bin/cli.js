@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, cpSync, readdirSync
 import { createInterface } from 'readline';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { execSync } from 'child_process';
+import { execFileSync, spawnSync } from 'child_process';
 import sanitize from '../src/index.js';
 import { patternCount } from '../src/detectors.js';
 
@@ -133,7 +133,7 @@ function detectFrameworks() {
     // Check if CLI command exists (e.g., 'openclaw', 'langchain')
     if (framework.cliCommand) {
       try {
-        execSync(`which ${framework.cliCommand}`, { stdio: 'pipe' });
+        execFileSync('which', [framework.cliCommand], { stdio: 'pipe' });
         found = true;
       } catch {}
     }
@@ -141,7 +141,7 @@ function detectFrameworks() {
     // Check global npm installation
     if (!found) {
       try {
-        execSync(`npm list -g ${framework.detectPackage} --depth=0 2>/dev/null`, { stdio: 'pipe' });
+        execFileSync('npm', ['list', '-g', framework.detectPackage, '--depth=0'], { stdio: 'pipe' });
         found = true;
       } catch {}
     }
@@ -154,7 +154,7 @@ function detectFrameworks() {
     // Check pnpm global
     if (!found) {
       try {
-        execSync(`pnpm list -g ${framework.detectPackage} --depth=0 2>/dev/null`, { stdio: 'pipe' });
+        execFileSync('pnpm', ['list', '-g', framework.detectPackage, '--depth=0'], { stdio: 'pipe' });
         found = true;
       } catch {}
     }
@@ -248,7 +248,9 @@ function installOpenClawPlugin() {
 
     // Verify with OpenClaw CLI if available
     try {
-      const result = execSync('openclaw plugins list 2>&1', { encoding: 'utf8', timeout: 10000 });
+      const probe = spawnSync('openclaw', ['plugins', 'list'], { encoding: 'utf8', timeout: 10000 });
+      if (probe.error || probe.status !== 0) throw probe.error || new Error('openclaw plugins list failed');
+      const result = `${probe.stdout || ''}${probe.stderr || ''}`;
       if (result.includes('xswarm-ai-sanitize') && result.includes('loaded')) {
         success('OpenClaw detected the plugin and loaded it automatically!');
         log();
