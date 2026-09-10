@@ -21,6 +21,7 @@ test('sanitize - accepts sanitize mode', () => {
 });
 
 test('sanitize - BLOCK mode blocks high-severity content', () => {
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   const text = 'Key: AKIAIOSFODNN7EXAMPLE, Token: ' + 'ghp_' + 'FAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE, Secret: ' + 'sk_' + 'live_' + 'FAKEFAKEFAKEFAKEFAKEFAKE';
   const result = sanitize(text, { mode: 'block' });
   assert.strictEqual(result.blocked, true);
@@ -28,6 +29,7 @@ test('sanitize - BLOCK mode blocks high-severity content', () => {
 });
 
 test('sanitize - BLOCK mode allows below threshold', () => {
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   const text = 'One key: AKIAIOSFODNN7EXAMPLE';
   const result = sanitize(text, {
     mode: 'block',
@@ -38,6 +40,7 @@ test('sanitize - BLOCK mode allows below threshold', () => {
 });
 
 test('sanitize - BLOCK mode custom thresholds', () => {
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   const text = 'Key1: AKIAIOSFODNN7EXAMPLE';
   const result = sanitize(text, {
     mode: 'block',
@@ -47,14 +50,17 @@ test('sanitize - BLOCK mode custom thresholds', () => {
 });
 
 test('sanitize - SANITIZE mode never blocks', () => {
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   const text = 'AKIAIOSFODNN7EXAMPLE AKIAIOSFODNN7EXAMPLE AKIAIOSFODNN7EXAMPLE';
   const result = sanitize(text, { mode: 'sanitize' });
   assert.strictEqual(result.blocked, false);
   assert.ok(result.sanitized);
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   assert.ok(!result.sanitized.includes('AKIAIOSFODNN7EXAMPLE'));
 });
 
 test('sanitize - SANITIZE mode reports actions', () => {
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   const text = 'Key: AKIAIOSFODNN7EXAMPLE';
   const result = sanitize(text, { mode: 'sanitize' });
   assert.ok(result.actions);
@@ -74,16 +80,19 @@ test('sanitize - handles null content', () => {
 });
 
 test('sanitize - redacts secrets in output', () => {
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   const text = 'My AWS key is AKIAIOSFODNN7EXAMPLE';
   const result = sanitize(text, {
     mode: 'block',
     blockThreshold: { secrets: 10, highSeverity: 10 }
   });
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   assert.ok(!result.sanitized.includes('AKIAIOSFODNN7EXAMPLE'));
   assert.ok(result.sanitized.includes('[REDACTED:'));
 });
 
 test('sanitize - reports threat counts', () => {
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   const text = 'Key: AKIAIOSFODNN7EXAMPLE';
   const result = sanitize(text, { mode: 'sanitize' });
   assert.ok(result.threats);

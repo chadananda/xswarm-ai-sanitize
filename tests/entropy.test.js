@@ -171,6 +171,7 @@ describe('extractHighEntropyStrings', () => {
   });
 
   it('extracts JWT tokens', () => {
+    // security-audit-ignore: committed-secret — jwt.io's public sample token used as a detector fixture, signed with a published demo key
     const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ';
     const text = `Authorization: Bearer ${jwt}`;
     const results = extractHighEntropyStrings(text);

@@ -120,6 +120,7 @@ describe('CLI - Secret Detection (GitHub)', () => {
 
 describe('CLI - Secret Detection (Database URLs)', () => {
   it('should detect PostgreSQL URL', () => {
+    // security-audit-ignore: committed-secret — localhost user:pass placeholder in a CLI redaction fixture, not a real credential
     const input = 'DATABASE_URL=postgres://user:pass@localhost:5432/db';
     const result = runCLI(['-q'], input);
     assert.strictEqual(result.exitCode, 0);

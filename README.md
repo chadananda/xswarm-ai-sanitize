@@ -12,6 +12,7 @@ AI agents are increasingly given access to sensitive data sources: email inboxes
 ```
 User: "Search my emails for 'deployment'"
 Agent: *searches Gmail*
+# security-audit-ignore: committed-secret — illustrative AWS docs example key in a narrative, not a credential
 Email contains: "Deploy with AWS_KEY=AKIAIOSFODNN7EXAMPLE"
 Agent: *stores in memory/logs*
 → API key now persists in agent memory forever

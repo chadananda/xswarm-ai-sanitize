@@ -73,19 +73,25 @@ describe('Secret Pattern Validation', () => {
 
 describe('Secret Pattern Matching', () => {
   const testCases = [
+    // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
     { name: 'aws_access_key', sample: 'AKIAIOSFODNN7EXAMPLE' },
     { name: 'aws_secret_key', sample: 'aws_secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"' },
     { name: 'azure_connection_string', sample: 'DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567ABC890DEF123GHI456JKL789MNO012PQR345STU6==' },
+    // security-audit-ignore: committed-secret — syntactically-shaped placeholder GitHub token used as a detector fixture, not a real token
     { name: 'github_pat', sample: 'ghp_1234567890abcdefghijklmnopqrstuvwxyz' },
+    // security-audit-ignore: committed-secret — syntactically-shaped placeholder GitHub token used as a detector fixture, not a real token
     { name: 'github_oauth', sample: 'gho_1234567890abcdefghijklmnopqrstuvwxyz' },
     { name: 'gitlab_pat', sample: 'glpat-abcdefghijklmnopqrst' },
     { name: 'gcp_api_key', sample: 'AIzaSyDaGmWKa4JsXZ-HjGw7ISLn_3namBGewQe' },
     { name: 'stripe_live_secret', sample: 'sk_' + 'live_' + 'FAKEFAKEFAKEFAKEFAKEFAKE' },
     { name: 'slack_bot_token', sample: 'xoxb-' + '123456789012-1234567890123-' + 'FAKEFAKEFAKEFAKEFAKEFAKE' },
     { name: 'slack_webhook', sample: 'https://hooks.' + 'slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXX' },
+    // security-audit-ignore: committed-secret — bare PEM header string used as a detector fixture, carries no key material
     { name: 'private_key_rsa', sample: '-----BEGIN RSA PRIVATE KEY-----' },
+    // security-audit-ignore: committed-secret — jwt.io's public sample token used as a detector fixture, signed with a published demo key
     { name: 'jwt_token', sample: 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U' },
     { name: 'database_url_mongodb', sample: 'mongodb://user:pass@localhost:27017/dbname' },
+    // security-audit-ignore: committed-secret — localhost user:pass placeholder in a redaction fixture, not a real database credential
     { name: 'database_url_postgres', sample: 'postgresql://user:pass@localhost:5432/db' },
     { name: 'sendgrid_api_key', sample: 'SG.' + 'X'.repeat(22) + '.' + 'X'.repeat(43) },
     { name: 'npm_token', sample: 'npm_' + 'a'.repeat(36) },
@@ -106,17 +112,16 @@ describe('Secret Pattern Matching', () => {
 
 describe('Edge Cases - Multiline and Special Characters', () => {
   it('should match secrets with newlines in context', () => {
-    const text = `
-      Here is my AWS key:
-      AKIAIOSFODNN7EXAMPLE
-      Keep it safe
-    `;
+    // Escaped string rather than a template literal so the suppression below sits adjacent to the key; content is byte-identical.
+    // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector fixture that was never a live credential
+    const text = '\n      Here is my AWS key:\n      AKIAIOSFODNN7EXAMPLE\n      Keep it safe\n    ';
     const pattern = patterns.secrets.find(p => p.name === 'aws_access_key');
     const regex = new RegExp(pattern.regex, 'gi');
     assert.ok(regex.test(text), 'Should match AWS key across newlines');
   });
 
   it('should match private keys with full block content', () => {
+    // security-audit-ignore: committed-secret — synthetic PEM block of filler base64 used as a detector fixture, no real key material
     const text = `-----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEA1234567890abcdefghijklmnopqrstuvwxyz
 ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmno

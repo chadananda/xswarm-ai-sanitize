@@ -7,6 +7,7 @@ test('patternCount - reports 600+ patterns', () => {
 });
 
 test('detectSecrets - AWS access key', () => {
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   const text = 'My key is AKIAIOSFODNN7EXAMPLE';
   const results = detectSecrets(text);
   assert.ok(results.length > 0);
@@ -50,6 +51,7 @@ test('detectSecrets - null text', () => {
 });
 
 test('detectAll - returns secrets and counts', () => {
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   const text = 'My API key is AKIAIOSFODNN7EXAMPLE.';
   const results = detectAll(text);
   assert.ok(results.secrets.length > 0);
@@ -58,23 +60,28 @@ test('detectAll - returns secrets and counts', () => {
 });
 
 test('detectAll - counts high severity threats', () => {
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   const text = 'AWS key AKIAIOSFODNN7EXAMPLE is critical';
   const results = detectAll(text);
   assert.ok(results.counts.highSeverity >= 0);
 });
 
 test('redactSecrets - replaces secrets with placeholders', () => {
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   const text = 'My key is AKIAIOSFODNN7EXAMPLE here';
   const secrets = detectSecrets(text);
   const redacted = redactSecrets(text, secrets);
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   assert.ok(!redacted.includes('AKIAIOSFODNN7EXAMPLE'));
   assert.ok(redacted.includes('[REDACTED:'));
 });
 
 test('redactSecrets - handles multiple secrets', () => {
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   const text = 'Key1: AKIAIOSFODNN7EXAMPLE and Key2: ' + 'ghp_' + 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
   const secrets = detectSecrets(text);
   const redacted = redactSecrets(text, secrets);
+  // security-audit-ignore: committed-secret — AWS's own published example key (AKIAIOSFODNN7EXAMPLE), a detector test fixture that was never a live credential
   assert.ok(!redacted.includes('AKIAIOSFODNN7EXAMPLE'));
   assert.ok(!redacted.includes('ghp_'));
 });
